@@ -25,7 +25,7 @@ st.sidebar.write("Your Pocket-Sized Team for Everyday Tasks Powering Your Resear
 
 # Navigation using the radio button
 page = st.sidebar.radio("Go to", [
-    "ℹ️ Info",
+    "💡 Info",
     "📝 SurveyBuilder (soon)",  
     "🧼 betterDATA",
     "🏷️ autoCODE beta",
@@ -39,7 +39,7 @@ page = st.sidebar.radio("Go to", [
 ])
 
 # Navigation
-if page == "ℹ️ Info":
+if page == "💡 Info":
     base_page()
 elif page == "📝 SurveyBuilder (soon)":
     survey_builder_page()
