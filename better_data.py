@@ -9,10 +9,12 @@ def identify_speeders(df, time_column, time_threshold):
     speeders = df[time_column] <= time_threshold
     return speeders.astype(int)
 
-def identify_inconsistencies(df, age_column, birth_year_column, missing_values):
+def identify_inconsistencies(df, age_column, birth_year_column, missing_values, allowable_difference=1):
     current_year = pd.Timestamp.now().year
     inconsistencies = df.apply(
-        lambda row: row[age_column] != (current_year - row[birth_year_column]) if row[age_column] not in missing_values and row[birth_year_column] not in missing_values else 0,
+        lambda row: abs(row[age_column] - (current_year - row[birth_year_column])) > allowable_difference 
+                    if row[age_column] not in missing_values and row[birth_year_column] not in missing_values 
+                    else 0,
         axis=1
     )
     return inconsistencies.astype(int)
@@ -24,13 +26,16 @@ def identify_straightliners(df, questions, missing_values):
     straightliners = df[questions].apply(is_straightliner, axis=1)
     return straightliners.astype(int)
 
-def identify_gibberish(df, open_answer_column, missing_values):
-    gibberish_pattern = re.compile(r'^[a-zA-Z]{8,}$')
+def identify_gibberish(df, open_answer_column, missing_values, language='en'):
+    if language == 'de':
+        gibberish_pattern = re.compile(r'^[a-zA-ZäöüÄÖÜß]{8,}$')
+    else:
+        gibberish_pattern = re.compile(r'^[a-zA-Z]{8,}$')
     gibberish = df[open_answer_column].apply(lambda x: bool(gibberish_pattern.match(str(x))) if x not in missing_values else 0)
     return gibberish.astype(int)
 
-def identify_gibberish_v2(df, open_answer_column, missing_values):
-    return identify_gibberish(df, open_answer_column, missing_values)
+def identify_gibberish_v2(df, open_answer_column, missing_values, language='en'):
+    return identify_gibberish(df, open_answer_column, missing_values, language)
 
 def identify_straightliners_v2(df, questions, missing_values):
     return identify_straightliners(df, questions, missing_values)
@@ -107,10 +112,11 @@ def better_data_page():
         if check_gibberish:
             open_answer_column = st.selectbox('Select open answer column', df.columns)
             selected_columns.add(open_answer_column)
+            language = st.selectbox('Select language for gibberish detection', ['en', 'de'])
             gibberish_weight = st.slider('Gibberish Weight', min_value=0.0, max_value=3.0, value=1.0)
             missing_values_gibberish = st.text_input('Enter missing values separated by commas', '-77,-99,np.nan', key='missing_values_gibberish')
             missing_values_gibberish = [eval(value.strip()) for value in missing_values_gibberish.split(',')]
-            num_gibberish = identify_gibberish(df, open_answer_column, missing_values_gibberish).sum()
+            num_gibberish = identify_gibberish(df, open_answer_column, missing_values_gibberish, language).sum()
             st.write(f"Number of gibberish answers: {num_gibberish}")
 
         check_straightliners_v2 = st.checkbox('Check Straightliners v2')
@@ -128,10 +134,11 @@ def better_data_page():
         if check_gibberish_v2:
             open_answer_column_v2 = st.selectbox('Select open answer column v2', df.columns)
             selected_columns.add(open_answer_column_v2)
+            language_v2 = st.selectbox('Select language for gibberish detection v2', ['en', 'de'], key='language_v2')
             gibberish_v2_weight = st.slider('Gibberish v2 Weight', min_value=0.0, max_value=3.0, value=1.0)
             missing_values_gibberish_v2 = st.text_input('Enter missing values separated by commas', '-77,-99,np.nan', key='missing_values_gibberish_v2')
             missing_values_gibberish_v2 = [eval(value.strip()) for value in missing_values_gibberish_v2.split(',')]
-            num_gibberish_v2 = identify_gibberish_v2(df, open_answer_column_v2, missing_values_gibberish_v2).sum()
+            num_gibberish_v2 = identify_gibberish_v2(df, open_answer_column_v2, missing_values_gibberish_v2, language_v2).sum()
             st.write(f"Number of gibberish answers v2: {num_gibberish_v2}")
 
         check_duplicates = st.checkbox('Check Duplicates')
@@ -171,7 +178,7 @@ def better_data_page():
                 score += df['Straightliner'] * straightliners_weight
 
             if check_gibberish:
-                df['Gibberish'] = identify_gibberish(df, open_answer_column, missing_values_gibberish)
+                df['Gibberish'] = identify_gibberish(df, open_answer_column, missing_values_gibberish, language)
                 score += df['Gibberish'] * gibberish_weight
 
             if check_straightliners_v2:
@@ -179,7 +186,7 @@ def better_data_page():
                 score += df['Straightliner_v2'] * straightliners_v2_weight
 
             if check_gibberish_v2:
-                df['Gibberish_v2'] = identify_gibberish_v2(df, open_answer_column_v2, missing_values_gibberish_v2)
+                df['Gibberish_v2'] = identify_gibberish_v2(df, open_answer_column_v2, missing_values_gibberish_v2, language_v2)
                 score += df['Gibberish_v2'] * gibberish_v2_weight
 
             if check_duplicates:
@@ -243,3 +250,5 @@ def better_data_page():
                 output.seek(0)
 
                 st.download_button('Download Bad IDs', data=output, file_name='bad_ids.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
