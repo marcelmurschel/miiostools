@@ -10,3 +10,4 @@ python_docx==1.1.2
 requests==2.31.0
 streamlit==1.34.0
 xlsxwriter
+openpyxl
