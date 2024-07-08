@@ -12,23 +12,36 @@ anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key)
 
 # Function to generate coding scheme using OpenAI API
 def generate_coding_schema(reviews_text, num_codes, question_text, temperature, language):
-    prompt = f"""Here is a sample of open answers of respondants of a survey. You are an analyst. 
+    prompt = f"""As an expert data analyst, your task is to create a comprehensive coding schema for analyzing open-ended survey responses. The survey question was:
 
-    I want you to write me a coding schema for analysing those open answers with {num_codes} codes and assign a number to them. Please in {language}.
+"{question_text}"
 
-    The following question was asked in the questionnaire: "{question_text}"
+Based on the following sample of responses, develop a coding schema with {num_codes} distinct codes, including a mandatory "Sonstige" (Other) category. Your schema should capture the main themes and topics present in the responses.
 
-    The JSON format should always look like this:
-    {{
-        "topics": [
-            {{"id": 1, "code": "Description"}},
-            {{"id": 2, "code": "Description"}},
-            {{"id": 3, "code": "Description"}},
+Sample responses:
+{reviews_text}
 
-        ]
-    }}
+Instructions:
+1. Analyze the responses carefully to identify recurring themes and topics.
+2. Create {num_codes - 1} unique codes for specific themes, starting with the most frequently mentioned topic.
+3. Always include "Sonstige" (Other) as the last code to capture any responses that don't fit into the specific categories.
+4. Each code should be concise yet descriptive, capturing a distinct aspect of the responses.
+5. Assign a numerical ID to each code, starting from 1, with "Sonstige" always being the last ID.
+6. Present your coding schema in {language}.
 
-    Afterwards, I will give more open answers that I want you to code.\n\n{reviews_text}\n\n Please begin with the code / topic that is mentioned the most"""
+Output your schema in the following JSON format:
+{{
+    "topics": [
+        {{"id": 1, "code": "Brief description of the most common theme"}},
+        {{"id": 2, "code": "Brief description of the second most common theme"}},
+        ...
+        {{"id": {num_codes - 1}, "code": "Brief description of the least common specific theme"}},
+        {{"id": {num_codes}, "code": "Sonstige"}}
+    ]
+}}
+
+Ensure that your specific codes collectively cover the major themes in the responses, with "Sonstige" capturing any outliers or less common themes."""
+
 
     response = client.chat.completions.create(
         model="gpt-4o",
